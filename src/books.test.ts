@@ -1,10 +1,13 @@
 import { describe, expect, test } from "vitest";
 import {
+  addBook,
   averageRating,
   countRead,
   filterBooks,
+  parseStoredBooks,
   removeBook,
   toggleRead,
+  validateNewBook,
 } from "./books";
 import { initialBooks } from "./data";
 
@@ -70,5 +73,79 @@ describe("averageRating", () => {
 
   test("returns null for an empty list", () => {
     expect(averageRating([])).toBeNull();
+  });
+});
+
+describe("validateNewBook", () => {
+  test("rejects empty or whitespace-only title and author", () => {
+    const message = "Title and author are required.";
+    expect(validateNewBook(initialBooks, { title: "", author: "A" })).toBe(
+      message
+    );
+    expect(validateNewBook(initialBooks, { title: "T", author: "   " })).toBe(
+      message
+    );
+  });
+
+  test("rejects a duplicate ignoring case and surrounding spaces", () => {
+    expect(
+      validateNewBook(initialBooks, {
+        title: "  dUNE ",
+        author: "frank HERBERT",
+      })
+    ).toBe("This book is already on your shelf.");
+  });
+
+  test("allows the same title by a different author", () => {
+    expect(
+      validateNewBook(initialBooks, { title: "Dune", author: "Someone Else" })
+    ).toBeNull();
+  });
+});
+
+describe("addBook", () => {
+  const input = {
+    title: "  Emma ",
+    author: " Jane Austen  ",
+    genre: "mystery" as const,
+    rating: 3,
+  };
+
+  test("appends a trimmed, unread book without changing the input array", () => {
+    const result = addBook(initialBooks, input);
+    expect(result).toHaveLength(initialBooks.length + 1);
+    expect(result[result.length - 1]).toMatchObject({
+      title: "Emma",
+      author: "Jane Austen",
+      genre: "mystery",
+      rating: 3,
+      isRead: false,
+    });
+    expect(initialBooks.some((book) => book.title === "Emma")).toBe(false);
+  });
+
+  test("gives each new book a unique id", () => {
+    const ids = addBook(addBook(initialBooks, input), input).map((b) => b.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("parseStoredBooks", () => {
+  test("returns null for missing, malformed or wrongly shaped data", () => {
+    expect(parseStoredBooks(null)).toBeNull();
+    expect(parseStoredBooks("{not json")).toBeNull();
+    expect(parseStoredBooks('{"a":1}')).toBeNull();
+    expect(parseStoredBooks('[{"id":"x"}]')).toBeNull();
+    expect(
+      parseStoredBooks(
+        JSON.stringify([{ ...initialBooks[0], genre: "horror" }])
+      )
+    ).toBeNull();
+  });
+
+  test("returns the books for valid data", () => {
+    expect(parseStoredBooks(JSON.stringify(initialBooks))).toEqual(
+      initialBooks
+    );
   });
 });
