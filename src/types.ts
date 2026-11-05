@@ -11,3 +11,11 @@ export type Book = {
   rating: number;
   isRead: boolean;
 };
+
+export type NewBook = {
+  title: string;
+  author: string;
+  genre: Genre;
+  /** 1 to 5 stars, 0 means "not rated" */
+  rating: number;
+};
